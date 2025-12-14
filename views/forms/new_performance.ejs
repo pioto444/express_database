@@ -1,0 +1,11 @@
+<form action="/cs/<%= Performance.id %>/new" method="POST">
+  <% Performance.statistics.forEach(function(stat) { %>
+    <div>
+      <label for="performance_<%= stat.name %>"><%= stat.name %></label>
+      <input type="number" name="<%= stat.name %>" id="performance_<%= stat.name %>" min="0" value="<%= stat.value %>" required/>
+    </div>
+  <% }); %>
+  <div>
+    <button>Dodaj</button>
+  </div>
+</form>
