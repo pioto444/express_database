@@ -1,0 +1,8 @@
+<form action="/cards/<%= category.id %>/delete" method="POST">
+  <select name="id">
+    <% category.cards.forEach(card => { %>
+      <option value="<%= card.id %>"><%= card.front %> - <%= card.back %></option>
+    <% }) %>
+  </select>
+  <button>Usuń</button>
+</form>

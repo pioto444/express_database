@@ -2,14 +2,19 @@
 
 <main>
   <h1><%= title %></h1>
+  <p>Category ID: <%= category.id %></p>
   <ul id="cards">
     <% category.cards.forEach(function(card){ %>
-    <li><%= card.front %> - <%= card.back %></li>
+    <li><%= card.front %> - <%= card.back %></li> 
     <% }) %>
   </ul>
   <div>
     <h3>Nowa fiszka</h3>
     <%- include("forms/new_card.ejs") %>
+    <h3>Usunięcie fiszki</h3>
+    <%- include("forms/delete_card.ejs") %>
+    <h3>Zamiana fiszki</h3>
+    <%- include("forms/swap_card.ejs") %>
   </div>
 </main>
 

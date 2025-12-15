@@ -35,13 +35,14 @@ const db_ops = {
     ) 
     RETURNING id, front, back;`
   ),
-  get_categories: db.prepare("SELECT id, name FROM fc_categories;"),
+  get_categories: db.prepare("SELECT id, name, category_id FROM fc_categories;"),
   get_category_by_id: db.prepare(
     "SELECT category_id, id, name FROM fc_categories WHERE id = ?;"
   ),
   get_cards_by_category_id: db.prepare(
     "SELECT id, front, back FROM fc_cards WHERE category_id = ?;"
   ),
+  delete_card: db.prepare("DELETE FROM fc_cards WHERE id = ?;"),
 };
 
 export function getCategorySummaries() {
@@ -63,8 +64,42 @@ export function getCategory(categoryId) {
   return null;
 }
 
-export function addCard(categoryId, card) {
-  return db_ops.insert_card_by_id.get(categoryId, card.front, card.back);
+export function addCard(category, card) {
+  try {
+    console.log("dodawanie karty do tablicy:", { category, ...card });
+    const stmt = db.prepare(
+      "INSERT INTO fc_cards (category_id, front, back) VALUES (?, ?, ?)"
+    );
+    stmt.run(category.category_id, card.front, card.back);
+    return true;
+  } catch (err) {
+    console.error("addCard error:", err);
+    return false;
+  }
+}
+
+export function modifyCard( card) {
+  try {
+    console.log("zamienianie karty do tablicy:", {card });
+    const stmt = db.prepare(
+      "UPDATE fc_cards SET front = ?, back = ? WHERE id = ?"
+    );
+    stmt.run(card.front, card.back, card.id);
+    return true;
+  } catch (err) {
+    console.error("addCard error:", err);
+    return false;
+  }
+}
+
+export function deleteCard(cardId) {
+  try {
+    const info = db_ops.delete_card.run(cardId);
+    return info && info.changes > 0;
+  } catch (err) {
+    console.error(err);
+    return false;
+  }
 }
 
 export function validateCardData(card) {
@@ -89,5 +124,7 @@ export default {
   hasCategory,
   getCategory,
   addCard,
+  modifyCard,
   validateCardData,
+  deleteCard,
 };
