@@ -1,59 +1,70 @@
-const card_categories = {
-  "adc-champions": {
-    name: "your bot - champions",
-    cards: [
-      { front: "smolder", back: "Crit" },
-      { front: "jhin", back: "Crit" },
-    ],
-  },
-  "mid-lane-champions": {
-    name: "your mid - champions",
-    cards: [
-      { front: "ahri", back: "Ability Power" },
-      { front: "yasuo", back: "Attack Damage" },
-    ],
-  },
-  "top-lane-champions": {
-    name: "your top - champions",
-    cards: [
-      { front: "darius", back: "Lethality" },
-      { front: "garen", back: "Ability Power" },
-    ],
-  },
-  "jungle-champions": {
-    name: "your jungle - champions",
-    cards: [
-      { front: "warwick", back: "Attack Damage" },
-      { front: "nunu", back: "Full Bomba" },
-    ],
-  },
-  "support-champions": {
-    name: "your support - champions",
-    cards: [
-      { front: "leona", back: "Support" },
-      { front: "nami", back: "Support" },
-    ],
-  },
+import { DatabaseSync } from "node:sqlite";
+
+const db_path = "./db.sqlite";
+const db = new DatabaseSync(db_path);
+
+console.log("Creating database tables");
+db.exec(
+  `CREATE TABLE IF NOT EXISTS fc_categories (
+    category_id   INTEGER PRIMARY KEY,
+    id            TEXT UNIQUE NOT NULL,
+    name          TEXT NOT NULL
+  ) STRICT;
+  CREATE TABLE IF NOT EXISTS fc_cards (
+    id            INTEGER PRIMARY KEY,
+    category_id   INTEGER NOT NULL REFERENCES fc_categories(category_id) ON DELETE NO ACTION,
+    front         TEXT NOT NULL,
+    back          TEXT NOT NULL
+  ) STRICT;`
+);
+
+const db_ops = {
+  insert_category: db.prepare(
+    `INSERT INTO fc_categories (id, name)
+        VALUES (?, ?) RETURNING category_id, id, name;`
+  ),
+  insert_card: db.prepare(
+    `INSERT INTO fc_cards (category_id, front, back) 
+        VALUES (?, ?, ?) RETURNING id, front, back;`
+  ),
+  insert_card_by_id: db.prepare(
+    `INSERT INTO fc_cards (category_id, front, back) VALUES (
+      (SELECT category_id FROM fc_categories WHERE id = ?),
+      ?, 
+      ?
+    ) 
+    RETURNING id, front, back;`
+  ),
+  get_categories: db.prepare("SELECT id, name FROM fc_categories;"),
+  get_category_by_id: db.prepare(
+    "SELECT category_id, id, name FROM fc_categories WHERE id = ?;"
+  ),
+  get_cards_by_category_id: db.prepare(
+    "SELECT id, front, back FROM fc_cards WHERE category_id = ?;"
+  ),
 };
 
 export function getCategorySummaries() {
-  return Object.entries(card_categories).map(([id, category]) => {
-    return { id, name: category.name };
-  });
+  var categories = db_ops.get_categories.all();
+  return categories;
 }
 
 export function hasCategory(categoryId) {
-  return card_categories.hasOwnProperty(categoryId);
+  let category = db_ops.get_category_by_id.get(categoryId);
+  return category != null;
 }
 
 export function getCategory(categoryId) {
-  if (hasCategory(categoryId))
-    return { id: categoryId, ...card_categories[categoryId] };
+  let category = db_ops.get_category_by_id.get(categoryId);
+  if (category != null) {
+    category.cards = db_ops.get_cards_by_category_id.all(category.category_id);
+    return category;
+  }
   return null;
 }
 
 export function addCard(categoryId, card) {
-  if (hasCategory(categoryId)) card_categories[categoryId].cards.push(card);
+  return db_ops.insert_card_by_id.get(categoryId, card.front, card.back);
 }
 
 export function validateCardData(card) {
